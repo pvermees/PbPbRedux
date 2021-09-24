@@ -1,7 +1,3 @@
-setwd('~/Dropbox/PbPb')
-rm(list=ls())
-options(warn=2)
-
 beta <- function(mx){
     (log(205)-log(mx))/(log(205)-log(202))
 }
@@ -40,7 +36,7 @@ avgblank <- function(blanks,spikes,spk){
         covlblk <- cov(lblkprime)
     }
     lspk <- -log(spikes[spk,'r52'])[1]
-    errlspk <- 0 # placeholder for spikes[spk[1],'err52']/100
+    errlspk <- 0 # placeholder for spikes[spk[1],'err52']/200
     list(lblk=mlblk,covlblk=covlblk,lspk=lspk,errlspk=errlspk)
 }
 
@@ -50,7 +46,7 @@ getaliquot <- function(i,samples,spikes){
     onames <- c('lM','l25','l45','l65','l75')
     lsdat <- unlist(log(samples[i,inames]))
     errlsdat <- samples[i,c('errmgspk','err74','err64',
-                            'err76','err65','err52')]/100
+                            'err76','err65','err52')]/200
     spk <- samples[i,'spk']
     lM <- lsdat['mgspk'] + log(spikes[spk,'pmg205']) # pmg205 optional
     lr25 <- -lsdat['r52']
@@ -73,7 +69,7 @@ getaliquot <- function(i,samples,spikes){
     covlsmp <- J %*% E %*% t(J)
     spk <- samples[i,'spk']
     lspk <- log(spikes[spk,'r52'])
-    # placeholder for spikes[spk[1],'err52']/100
+    # placeholder for spikes[spk[1],'err52']/200
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
@@ -162,22 +158,4 @@ process <- function(samples,blanks,spikes){
         out[i,'rho'] <- cormat[5,6]
     }
     out
-}
-
-samples <- read.csv('samples.csv',header=TRUE)
-blanks <- read.csv('blanksGujba.csv',header=TRUE)
-spikes <- read.csv('spikes.csv',header=TRUE)
-
-if (FALSE){
-    i <- 3
-    ablk <- avgblank(blanks,spikes,spk=samples[i,'spk']) # with covariance matrix
-    lsmp <- getsample(i=i,samples,spikes) # without covariance matrix
-    E <- getE(i,samples,ablk,spikes)
-    pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
-    fit <- optim(pinit,fn=LL,i=i,lsmp=lsmp,lblk=ablk$lblk,E=E,hessian=TRUE)
-    covmat <- solve(fit$hessian)
-} else {
-    tab <- process(samples[-2,],blanks,spikes)
-    PbPb <- IsoplotR:::as.PbPb(tab,format=2)
-    IsoplotR::isochron(PbPb)
 }
