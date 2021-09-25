@@ -16,7 +16,7 @@ if (FALSE){
     covmat <- solve(fit$hessian)
 }
 if (TRUE){
-    tab <- process(samples[-2,],blanks,spikes,conc=TRUE)
+    tab <- process(samples[-2,],blanks,spikes)
     PbPb <- IsoplotR:::as.PbPb(tab,format=2)
     settings('iratio','U238U235',137.786,0.015)
     isochron(PbPb,exterr=FALSE)

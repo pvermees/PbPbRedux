@@ -13,19 +13,17 @@ lxstar <- function(lM,lr45,lr65,lr75,lr25,lr25t){
     out
 }
 
-avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
+avgblank <- function(blanks,blk,spikes,spk){
     i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
     if (length(i)<1) stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57'),drop=FALSE])
-    lblk <- lxstar(lM=lbdat[,'mgspk'] +
-                       ifelse(conc,log(spikes[spk,'pmg205']),0),
+    lblk <- lxstar(lM=lbdat[,'mgspk'],
                    lr45=-lbdat[,'r54'], # flip sign
                    lr65=-lbdat[,'r56'], # flip sign
                    lr75=-lbdat[,'r57'], # flip sign
                    lr25=-lbdat[,'r52'], # flip sign
                    lr25t=-log(spikes[spk,'r52'])) # flip sign
-    lblkprime <- lxstar(lM=lbdat[,'mgspk'] +
-                            ifelse(conc,log(spikes[spk,'pmg205']),0),
+    lblkprime <- lxstar(lM=lbdat[,'mgspk'],
                         lr45=-lbdat[,'r54'], # flip sign
                         lr65=-lbdat[,'r56'], # flip sign
                         lr75=-lbdat[,'r57'], # flip sign
@@ -51,14 +49,14 @@ avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
 }
 
 # get x/5 data from a particular aliquot:
-getaliquot <- function(i,samples,spikes,conc=FALSE){
+getaliquot <- function(i,samples,spikes){
     inames <- c('mgspk','r74','r64','r76','r65','r52')
     onames <- c('lM','l25','l45','l65','l75')
     lsdat <- unlist(log(samples[i,inames]))
     errlsdat <- samples[i,c('errmgspk','err74','err64',
                             'err76','err65','err52')]/200
     spk <- samples[i,'spk']
-    lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[spk,'pmg205']),0)
+    lM <- lsdat['mgspk']
     lr25 <- -lsdat['r52']
     lr45 <- lsdat['r65']-lsdat['r64']
     lr65 <- lsdat['r65']
@@ -83,8 +81,8 @@ getaliquot <- function(i,samples,spikes,conc=FALSE){
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
-getsample <- function(i,samples,spikes,conc=FALSE){
-    a <- getaliquot(i=i,samples=samples,spikes=spikes,conc=conc)
+getsample <- function(i,samples,spikes){
+    a <- getaliquot(i=i,samples=samples,spikes=spikes)
     spk <- samples[i,'spk']
     out <- lxstar(lM=a$lsmp['lM'], 
                   lr45=a$lsmp['l45'],
@@ -146,7 +144,7 @@ init <- function(i,lsmp,lblk){
     out
 }
 
-process <- function(samples,blanks,spikes,conc=FALSE){
+process <- function(samples,blanks,spikes){
     ns <- nrow(samples)
     out <- matrix(NA,nrow=ns,ncol=5)
     colnames(out) <- c('4/6','s[4/6]','7/6','s[7/6]','rho')
@@ -155,9 +153,9 @@ process <- function(samples,blanks,spikes,conc=FALSE){
         print(i)
         # with covariance matrix:
         ablk <- avgblank(blanks,blk=samples[i,'blk'],
-                         spikes,spk=samples[i,'spk'],conc=conc)
+                         spikes,spk=samples[i,'spk'])
         # without covariance matrix:
-        lsmp <- getsample(i=i,samples,spikes,conc=conc)
+        lsmp <- getsample(i=i,samples,spikes)
         E <- getE(i,samples,ablk,spikes)
         pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
         fit <- optim(pinit,fn=LL,method='BFGS',i=i,lsmp=lsmp,
