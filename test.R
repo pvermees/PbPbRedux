@@ -1,8 +1,9 @@
 setwd('~/Documents/Programming/R/PbPb_Redux/')
 source('PbPb_Redux.R')
+library(IsoplotR)
 
 samples <- read.csv('samples.csv',header=TRUE)
-blanks <- read.csv('blanksGujba.csv',header=TRUE)
+blanks <- read.csv('blanks2.csv',header=TRUE)
 spikes <- read.csv('spikes.csv',header=TRUE)
 
 if (FALSE){
@@ -13,8 +14,10 @@ if (FALSE){
     pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
     fit <- optim(pinit,fn=LL,i=i,lsmp=lsmp,lblk=ablk$lblk,E=E,hessian=TRUE)
     covmat <- solve(fit$hessian)
-} else {
-    tab <- process(samples[-c(2,14),],blanks,spikes)
+}
+if (TRUE){
+    tab <- process(samples[-2,],blanks,spikes,conc=TRUE)
     PbPb <- IsoplotR:::as.PbPb(tab,format=2)
-    IsoplotR::isochron(PbPb)
+    settings('iratio','U238U235',137.786,0.015)
+    isochron(PbPb,exterr=FALSE)
 }

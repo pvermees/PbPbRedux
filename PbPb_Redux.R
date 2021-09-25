@@ -13,25 +13,35 @@ lxstar <- function(lM,lr45,lr65,lr75,lr25,lr25t){
     out
 }
 
-avgblank <- function(blanks,spikes,spk){
-    i <- which(blanks[,'spk']%in%spk)
+avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
+    i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
+    if (length(i)<1) stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57'),drop=FALSE])
     lblk <- lxstar(lM=lbdat[,'mgspk'] +
-                       log(spikes[spk,'pmg205']), # pmg205 optional
+                       ifelse(conc,log(spikes[spk,'pmg205']),0),
                    lr45=-lbdat[,'r54'], # flip sign
                    lr65=-lbdat[,'r56'], # flip sign
                    lr75=-lbdat[,'r57'], # flip sign
                    lr25=-lbdat[,'r52'], # flip sign
                    lr25t=-log(spikes[spk,'r52'])) # flip sign
     lblkprime <- lxstar(lM=lbdat[,'mgspk'] +
-                            log(spikes[spk,'pmg205']), # pmg205 optional
+                            ifelse(conc,log(spikes[spk,'pmg205']),0),
                         lr45=-lbdat[,'r54'], # flip sign
                         lr65=-lbdat[,'r56'], # flip sign
                         lr75=-lbdat[,'r57'], # flip sign
                         lr25=-lbdat[,'r52']) # flip sign
     mlblk <- colMeans(lblkprime)
-    if (nrow(lblkprime)<2){
-        covlblk <- matrix(0,3,3)
+    if (length(i)<2){
+        E <- diag(blanks[i,c('mgspkerr','err52','err54','err56','err57')]/200)^2
+        J <- matrix(0,3,5)
+        J[1:3,1] <- 1
+        J[1,2] <- -beta(204)
+        J[2,2] <- -beta(206)
+        J[3,2] <- -beta(207)
+        J[1,3] <- 1
+        J[2,4] <- 1
+        J[3,5] <- 1
+        covlblk <- J %*% E %*% t(J)
     } else {
         covlblk <- cov(lblkprime)
     }
@@ -41,14 +51,14 @@ avgblank <- function(blanks,spikes,spk){
 }
 
 # get x/5 data from a particular aliquot:
-getaliquot <- function(i,samples,spikes){
+getaliquot <- function(i,samples,spikes,conc=FALSE){
     inames <- c('mgspk','r74','r64','r76','r65','r52')
     onames <- c('lM','l25','l45','l65','l75')
     lsdat <- unlist(log(samples[i,inames]))
     errlsdat <- samples[i,c('errmgspk','err74','err64',
                             'err76','err65','err52')]/200
     spk <- samples[i,'spk']
-    lM <- lsdat['mgspk'] + log(spikes[spk,'pmg205']) # pmg205 optional
+    lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[spk,'pmg205']),0)
     lr25 <- -lsdat['r52']
     lr45 <- lsdat['r65']-lsdat['r64']
     lr65 <- lsdat['r65']
@@ -73,10 +83,10 @@ getaliquot <- function(i,samples,spikes){
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
-getsample <- function(i,samples,spikes){
-    a <- getaliquot(i=i,samples=samples,spikes=spikes)
+getsample <- function(i,samples,spikes,conc=FALSE){
+    a <- getaliquot(i=i,samples=samples,spikes=spikes,conc=conc)
     spk <- samples[i,'spk']
-    out <- lxstar(lM=a$lsmp['lM'], # pmg205 optional
+    out <- lxstar(lM=a$lsmp['lM'], 
                   lr45=a$lsmp['l45'],
                   lr65=a$lsmp['l65'],
                   lr75=a$lsmp['l75'],
@@ -121,7 +131,7 @@ LL <- function(p,i=1,lsmp,lblk,E){
     D[4] <- lsmp[1,'l4'] - log(exp(c46+c6) + exp(c4b))
     D[5] <- lsmp[1,'l6'] - log(exp(c6b) + exp(c6))
     D[6] <- lsmp[1,'l7'] - log(exp(c76+c6) + exp(c7b))
-    (D %*% solve(E) %*% D)
+    stats::mahalanobis(D,center=FALSE,cov=E)/2
 }
 
 init <- function(i,lsmp,lblk){
@@ -136,21 +146,25 @@ init <- function(i,lsmp,lblk){
     out
 }
 
-process <- function(samples,blanks,spikes){
+process <- function(samples,blanks,spikes,conc=FALSE){
     ns <- nrow(samples)
     out <- matrix(NA,nrow=ns,ncol=5)
     colnames(out) <- c('4/6','s[4/6]','7/6','s[7/6]','rho')
     rownames(out) <- samples$Label
     for (i in 1:nrow(samples)){
         print(i)
-        ablk <- avgblank(blanks,spikes,spk=samples[i,'spk']) # with covariance matrix
-        lsmp <- getsample(i=i,samples,spikes) # without covariance matrix
+        # with covariance matrix:
+        ablk <- avgblank(blanks,blk=samples[i,'blk'],
+                         spikes,spk=samples[i,'spk'],conc=conc)
+        # without covariance matrix:
+        lsmp <- getsample(i=i,samples,spikes,conc=conc)
         E <- getE(i,samples,ablk,spikes)
         pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
-        fit <- optim(pinit,fn=LL,i=i,lsmp=lsmp,
+        fit <- optim(pinit,fn=LL,method='BFGS',i=i,lsmp=lsmp,
                      lblk=ablk$lblk,E=E,hessian=TRUE)
         J <- diag(exp(fit$par))
-        covmat <- J %*% solve(fit$hessian) %*% t(J)
+        H <- IsoplotR:::nearPD(fit$hessian)
+        covmat <- J %*% solve(H) %*% t(J)
         cormat <- cov2cor(covmat)
         out[i,c('4/6','7/6')] <- exp(fit$par[5:6])
         out[i,'s[4/6]'] <- sqrt(covmat[5,5])
