@@ -2,69 +2,85 @@ beta <- function(mx){
     (log(205)-log(mx))/(log(205)-log(202))
 }
 
-lxstar <- function(lM,lr45,lr65,lr75,lr25,lr25t){
+lxstar <- function(lM,lr45,lr65,lr75,lr85,lr25,lr25t){
     if (missing(lr25t)) fract <- -lr25
     else fract <- lr25t-lr25
     l4 <- lr45 + lM + beta(204)*fract
     l6 <- lr65 + lM + beta(206)*fract
     l7 <- lr75 + lM + beta(207)*fract
-    out <- cbind(l4,l6,l7)
-    colnames(out) <- c('l4','l6','l7')
+    l8 <- lr85 + lM + beta(208)*fract
+    out <- cbind(l4,l6,l7,l8)
+    colnames(out) <- c('l4','l6','l7','l8')
     out
 }
 
-avgblank <- function(blanks,blk,spikes,spk){
+avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
     i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
     if (length(i)<1) stop('Missing blank data.')
-    lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57'),drop=FALSE])
-    lblk <- lxstar(lM=lbdat[,'mgspk'],
+    lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57','r58'),drop=FALSE])
+    lblk <- lxstar(lM=lbdat[,'mgspk'] +
+                       ifelse(conc,log(spikes[spk,'pmg205']),0),
                    lr45=-lbdat[,'r54'], # flip sign
                    lr65=-lbdat[,'r56'], # flip sign
                    lr75=-lbdat[,'r57'], # flip sign
+                   lr85=-lbdat[,'r58'], # flip sign
                    lr25=-lbdat[,'r52'], # flip sign
                    lr25t=-log(spikes[spk,'r52'])) # flip sign
-    lblkprime <- lxstar(lM=lbdat[,'mgspk'],
+    lblkprime <- lxstar(lM=lbdat[,'mgspk'] +
+                            ifelse(conc,log(spikes[spk,'pmg205']),0),
                         lr45=-lbdat[,'r54'], # flip sign
                         lr65=-lbdat[,'r56'], # flip sign
                         lr75=-lbdat[,'r57'], # flip sign
+                        lr85=-lbdat[,'r58'], # flip sign
                         lr25=-lbdat[,'r52']) # flip sign
     mlblk <- colMeans(lblkprime)
     if (length(i)<2){
-        E <- diag(blanks[i,c('mgspkerr','err52','err54','err56','err57')]/200)^2
-        J <- matrix(0,3,5)
-        J[1:3,1] <- 1
+        E <- diag(blanks[i,c('mgspkerr','err52','err54',
+                             'err56','err57','err58')]/200)^2
+        J <- matrix(0,4,5)
+        J[1:4,1] <- 1
         J[1,2] <- -beta(204)
         J[2,2] <- -beta(206)
         J[3,2] <- -beta(207)
+        J[4,2] <- -beta(208)
         J[1,3] <- 1
         J[2,4] <- 1
         J[3,5] <- 1
+        J[4,5] <- 1
         covlblk <- J %*% E %*% t(J)
     } else {
         covlblk <- cov(lblkprime)
     }
     lspk <- -log(spikes[spk,'r52'])[1]
     errlspk <- 0 # placeholder for spikes[spk[1],'err52']/200
-    list(lblk=mlblk,covlblk=covlblk,lspk=lspk,errlspk=errlspk)
+    out <- list(lblk=mlblk,covlblk=covlblk,lspk=lspk,errlspk=errlspk)
+    if (conc){
+        pgPb <- sweep(lblk,MARGIN=2,FUN='+',log(c(204,206,207,208)))
+        pgPbt <- rowSums(exp(pgPb))
+        out$Pb <- exp(mean(log(pgPbt)))
+        out$relerrPb <- sd(log(pgPbt))
+    }
+    out
 }
 
 # get x/5 data from a particular aliquot:
-getaliquot <- function(i,samples,spikes){
-    inames <- c('mgspk','r74','r64','r76','r65','r52')
-    onames <- c('lM','l25','l45','l65','l75')
+getaliquot <- function(i,samples,spikes,conc=FALSE){
+    inames <- c('mgspk','r74','r64','r76','r65','r86','r52')
+    onames <- c('lM','l25','l45','l65','l75','l85')
     lsdat <- unlist(log(samples[i,inames]))
     errlsdat <- samples[i,c('errmgspk','err74','err64',
-                            'err76','err65','err52')]/200
+                            'err76','err65','err86','err52')]/200
     spk <- samples[i,'spk']
-    lM <- lsdat['mgspk']
+    lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[spk,'pmg205']),0)
     lr25 <- -lsdat['r52']
     lr45 <- lsdat['r65']-lsdat['r64']
     lr65 <- lsdat['r65']
     lr75 <- lsdat['r76']+lsdat['r65']
-    lsmp <- c(lM,lr25,lr45,lr65,lr75)
+    lr85 <- lsdat['r86']+lsdat['r65']
+    lsmp <- c(lM,lr25,lr45,lr65,lr75,lr85)
     names(lsmp) <- onames
     E <- diag(errlsdat)^2
-    J <- matrix(0,nrow=5,ncol=6)
+    J <- matrix(0,nrow=6,ncol=7)
     colnames(J) <- inames
     rownames(J) <- onames
     J['lM','mgspk'] <- 1
@@ -74,6 +90,8 @@ getaliquot <- function(i,samples,spikes){
     J['l65','r65'] <- 1
     J['l75','r76'] <- 1
     J['l75','r65'] <- 1
+    J['l85','r86'] <- 1
+    J['l85','r65'] <- 1
     covlsmp <- J %*% E %*% t(J)
     spk <- samples[i,'spk']
     lspk <- log(spikes[spk,'r52'])
@@ -81,13 +99,14 @@ getaliquot <- function(i,samples,spikes){
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
-getsample <- function(i,samples,spikes){
-    a <- getaliquot(i=i,samples=samples,spikes=spikes)
+getsample <- function(i,samples,spikes,conc=FALSE){
+    a <- getaliquot(i=i,samples=samples,spikes=spikes,conc=conc)
     spk <- samples[i,'spk']
     out <- lxstar(lM=a$lsmp['lM'], 
                   lr45=a$lsmp['l45'],
                   lr65=a$lsmp['l65'],
                   lr75=a$lsmp['l75'],
+                  lr85=a$lsmp['l85'],
                   lr25=a$lsmp['l25'],
                   lr25t=-log(spikes[spk,'r52']))
     out
@@ -95,8 +114,9 @@ getsample <- function(i,samples,spikes){
 
 getE <- function(i=1,samples,ablk,spikes){
     lsmp <- getaliquot(i,samples,spikes)
-    Es <- lsmp$covlsmp # lx5 data
-    Eb <- ablk$covlblk # lx data
+    Es <- lsmp$covlsmp[c('lM','l25','l45','l65','l75'),
+                       c('lM','l25','l45','l65','l75')]
+    Eb <- ablk$covlblk[c('l4','l6','l7'),c('l4','l6','l7')]
     E <- matrix(0,9,9)
     E[1:3,1:3] <- Eb
     E[4:8,4:8] <- Es
@@ -153,9 +173,10 @@ process <- function(samples,blanks,spikes){
         print(i)
         # with covariance matrix:
         ablk <- avgblank(blanks,blk=samples[i,'blk'],
-                         spikes,spk=samples[i,'spk'])
+                         spikes,spk=samples[i,'spk'],
+                         conc=FALSE)
         # without covariance matrix:
-        lsmp <- getsample(i=i,samples,spikes)
+        lsmp <- getsample(i=i,samples,spikes,conc=FALSE)
         E <- getE(i,samples,ablk,spikes)
         pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
         fit <- optim(pinit,fn=LL,method='BFGS',i=i,lsmp=lsmp,
