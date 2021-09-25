@@ -1,5 +1,5 @@
-setwd('~/Documents/Programming/R/PbPb_Redux/')
-source('PbPb_Redux.R')
+setwd('~/Documents/Programming/R/PbPbRedux/')
+source('PbPbRedux.R')
 library(IsoplotR)
 
 samples <- read.csv('samples.csv',header=TRUE)
