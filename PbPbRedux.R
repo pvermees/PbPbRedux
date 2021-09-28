@@ -14,7 +14,7 @@ lxstar <- function(lM,lr45,lr65,lr75,lr85,lr25,lr25t){
     out
 }
 
-avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
+avgblank <- function(blanks,blk,spikes,spk,conc=TRUE){
     i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
     if (length(i)<1) stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57','r58'),drop=FALSE])
@@ -37,7 +37,8 @@ avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
     if (length(i)<2){
         E <- diag(blanks[i,c('mgspkerr','err52','err54',
                              'err56','err57','err58')]/200)^2
-        J <- matrix(0,4,5)
+        J <- matrix(0,4,6)
+        rownames(J) <- c('l4','l6','l7','l8')
         J[1:4,1] <- 1
         J[1,2] <- -beta(204)
         J[2,2] <- -beta(206)
@@ -46,7 +47,7 @@ avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
         J[1,3] <- 1
         J[2,4] <- 1
         J[3,5] <- 1
-        J[4,5] <- 1
+        J[4,6] <- 1
         covlblk <- J %*% E %*% t(J)
     } else {
         covlblk <- cov(lblkprime)
@@ -64,7 +65,7 @@ avgblank <- function(blanks,blk,spikes,spk,conc=FALSE){
 }
 
 # get x/5 data from a particular aliquot:
-getaliquot <- function(i,samples,spikes,conc=FALSE){
+getaliquot <- function(i,samples,spikes,conc=TRUE){
     inames <- c('mgspk','r74','r64','r76','r65','r86','r52')
     onames <- c('lM','l25','l45','l65','l75','l85')
     lsdat <- unlist(log(samples[i,inames]))
@@ -99,7 +100,7 @@ getaliquot <- function(i,samples,spikes,conc=FALSE){
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
-getsample <- function(i,samples,spikes,conc=FALSE){
+getsample <- function(i,samples,spikes,conc=TRUE){
     a <- getaliquot(i=i,samples=samples,spikes=spikes,conc=conc)
     spk <- samples[i,'spk']
     out <- lxstar(lM=a$lsmp['lM'], 
@@ -166,17 +167,16 @@ init <- function(i,lsmp,lblk){
 
 process <- function(samples,blanks,spikes){
     ns <- nrow(samples)
-    out <- matrix(NA,nrow=ns,ncol=5)
-    colnames(out) <- c('4/6','s[4/6]','7/6','s[7/6]','rho')
+    out <- matrix(NA,nrow=ns,ncol=6)
+    colnames(out) <- c('pgPb','4/6','s[4/6]','7/6','s[7/6]','rho')
     rownames(out) <- samples$Label
     for (i in 1:nrow(samples)){
         print(i)
         # with covariance matrix:
         ablk <- avgblank(blanks,blk=samples[i,'blk'],
-                         spikes,spk=samples[i,'spk'],
-                         conc=FALSE)
+                         spikes,spk=samples[i,'spk'])
         # without covariance matrix:
-        lsmp <- getsample(i=i,samples,spikes,conc=FALSE)
+        lsmp <- getsample(i=i,samples,spikes)
         E <- getE(i,samples,ablk,spikes)
         pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
         fit <- optim(pinit,fn=LL,method='BFGS',i=i,lsmp=lsmp,
@@ -185,6 +185,7 @@ process <- function(samples,blanks,spikes){
         H <- IsoplotR:::nearPD(fit$hessian)
         covmat <- J %*% solve(H) %*% t(J)
         cormat <- cov2cor(covmat)
+        out[i,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
         out[i,c('4/6','7/6')] <- exp(fit$par[5:6])
         out[i,'s[4/6]'] <- sqrt(covmat[5,5])
         out[i,'s[7/6]'] <- sqrt(covmat[6,6])
