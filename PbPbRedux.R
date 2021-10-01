@@ -14,9 +14,15 @@ lxstar <- function(lM,lr45,lr65,lr75,lr85,lr25,lr25t){
     out
 }
 
-avgblank <- function(blanks,blk,spikes,spk,conc=TRUE){
-    i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
-    if (length(i)<1) stop('Missing blank data.')
+avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
+    if (missing(blk))
+        blk <- blanks[i,'name']
+    if (missing(spk))
+        spk <- blanks[i,'spk']
+    if (missing(i))
+        i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
+    if (length(i)<1)
+        stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57','r58'),drop=FALSE])
     lblk <- lxstar(lM=lbdat[,'mgspk'] +
                        ifelse(conc,log(spikes[spk,'pmg205']),0),
@@ -59,7 +65,12 @@ avgblank <- function(blanks,blk,spikes,spk,conc=TRUE){
         pgPb <- sweep(lblk,MARGIN=2,FUN='+',log(c(204,206,207,208)))
         pgPbt <- rowSums(exp(pgPb))
         out$Pb <- exp(mean(log(pgPbt)))
-        out$relerrPb <- sd(log(pgPbt))
+        if (length(i)<2){
+            J <- exp(pgPb)
+            out$relerrPb <- sqrt(J %*% covlblk %*% t(J))/pgPbt
+        } else {
+            out$relerrPb <- sd(log(pgPbt))
+        }
     }
     out
 }
@@ -165,31 +176,43 @@ init <- function(i,lsmp,lblk){
     out
 }
 
-process <- function(samples,blanks,spikes){
+# cblanks: optionals replicate blanks to be used for the covariance matrix
+process <- function(samples,blanks,spikes,cblanks){
+    cb <- !missing(cblanks)
     ns <- nrow(samples)
-    out <- matrix(NA,nrow=ns,ncol=6)
-    colnames(out) <- c('pgPb','4/6','s[4/6]','7/6','s[7/6]','rho')
+    cnames <- c('4/6','s[4/6]','7/6','s[7/6]','rho')
+    if (cb){
+        cnames <- c(cnames,'pgPb','pgPb(blk)')
+        cblk <- avgblank(i=1:ns,blanks=cblanks,spikes=spikes)$covlblk
+    } else {
+        cnames <- c(cnames,'pgPb')
+    }
+    out <- matrix(NA,nrow=ns,ncol=length(cnames))
+    colnames(out) <- cnames
     rownames(out) <- samples$Label
-    for (i in 1:nrow(samples)){
-        print(i)
-        # with covariance matrix:
-        ablk <- avgblank(blanks,blk=samples[i,'blk'],
-                         spikes,spk=samples[i,'spk'])
-        # without covariance matrix:
-        lsmp <- getsample(i=i,samples,spikes)
-        E <- getE(i,samples,ablk,spikes)
-        pinit <- init(i=i,lsmp=lsmp,lblk=ablk$lblk)
-        fit <- optim(pinit,fn=LL,method='BFGS',i=i,lsmp=lsmp,
+    for (ii in 1:nrow(samples)){
+        if (cb){ # each aliquot has its own blank but covariance matrix is shared
+            ablk <- avgblank(i=ii,blanks=blanks,spikes=spikes)
+            ablk$covlblk <- cblk
+            out[ii,'pgPb(blk)'] <- sum(exp(ablk$lblk)*c(204,206:208))
+        } else { # aliquots share blanks by 'blk' label
+            ablk <- avgblank(blanks=blanks,blk=samples[ii,'blk'],
+                             spikes=spikes,spk=samples[ii,'spk'])
+        }
+        lsmp <- getsample(i=ii,samples,spikes)
+        E <- getE(ii,samples,ablk,spikes)
+        pinit <- init(i=ii,lsmp=lsmp,lblk=ablk$lblk)
+        fit <- optim(pinit,fn=LL,method='BFGS',i=ii,lsmp=lsmp,
                      lblk=ablk$lblk,E=E,hessian=TRUE)
         J <- diag(exp(fit$par))
         H <- IsoplotR:::nearPD(fit$hessian)
         covmat <- J %*% solve(H) %*% t(J)
         cormat <- cov2cor(covmat)
-        out[i,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
-        out[i,c('4/6','7/6')] <- exp(fit$par[5:6])
-        out[i,'s[4/6]'] <- sqrt(covmat[5,5])
-        out[i,'s[7/6]'] <- sqrt(covmat[6,6])
-        out[i,'rho'] <- cormat[5,6]
+        out[ii,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
+        out[ii,c('4/6','7/6')] <- exp(fit$par[5:6])
+        out[ii,'s[4/6]'] <- sqrt(covmat[5,5])
+        out[ii,'s[7/6]'] <- sqrt(covmat[6,6])
+        out[ii,'rho'] <- cormat[5,6]
     }
     out
 }

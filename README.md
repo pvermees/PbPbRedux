@@ -1,21 +1,32 @@
 # PbPbRedux
 TIMS Pb/Pb data reduction software
 
-Example:
+Example (requires [IsoplotR](http://ucl.ac.uk/~ucfbpve/isoplotr/)):
 
 ```
-# load the PbPbRedux code:
 source('PbPbRedux.R')
-
-# load the input files:
-samples <- read.csv('samples.csv',header=TRUE)
-blanks <- read.csv('blanks2.csv',header=TRUE)
 spikes <- read.csv('spikes.csv',header=TRUE)
+settings('iratio','U238U235',137.786,0.015)
 
-# process the data, omitting the 2nd aliquot:
-tab <- process(samples[-2,],blanks[,-2],spikes)
+option <- 3
 
-# plot the isochron
-PbPb <- IsoplotR:::as.PbPb(tab,format=2)
-IsoplotR::isochron(PbPb)
+if (option==1){ # all samples use the same blank:
+    samples <- read.csv('samples1.csv',header=TRUE)
+    blanks <- read.csv('blanks1.csv',header=TRUE)
+    tab <- process(samples,blanks,spikes)
+} else if (option==2){ # each aliquot has its own blank:
+    samples <- read.csv('samples2.csv',header=TRUE)
+    blanks <- read.csv('blanks2.csv',header=TRUE)
+    tab <- process(samples,blanks,spikes)
+} else if (option==3){ # individual blanks with shared covariance matrix:
+    samples <- read.csv('samples2.csv',header=TRUE)
+    cblanks <- read.csv('blanks1.csv',header=TRUE)
+    blanks <- read.csv('blanks2.csv',header=TRUE)
+    tab <- process(samples,blanks,spikes,cblanks)
+}
+
+# aliquots to omit from the isochron
+omit <- c(1:3,6,8)
+PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2)
+IsoplotR::isochron(PbPb,exterr=FALSE)
 ```
