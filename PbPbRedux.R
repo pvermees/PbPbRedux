@@ -176,11 +176,11 @@ init <- function(i,lsmp,lblk){
     out
 }
 
-# cblanks: optionals replicate blanks to be used for the covariance matrix
+# all input and output errors are reported as 2se%
 process <- function(samples,blanks,spikes,cblanks){
     cb <- !missing(cblanks)
     ns <- nrow(samples)
-    cnames <- c('4/6','s[4/6]','7/6','s[7/6]','rho')
+    cnames <- c('4/6','err[4/6]','7/6','err[7/6]','rho')
     if (cb){
         cnames <- c(cnames,'pgPb','pgPb(blk)')
         cblk <- avgblank(i=1:ns,blanks=cblanks,spikes=spikes)$covlblk
@@ -191,13 +191,11 @@ process <- function(samples,blanks,spikes,cblanks){
     colnames(out) <- cnames
     rownames(out) <- samples$Label
     for (ii in 1:nrow(samples)){
+        ablk <- avgblank(blanks=blanks,blk=samples[ii,'blk'],
+                         spikes=spikes,spk=samples[ii,'spk'])
         if (cb){ # each aliquot has its own blank but covariance matrix is shared
-            ablk <- avgblank(i=ii,blanks=blanks,spikes=spikes)
             ablk$covlblk <- cblk
             out[ii,'pgPb(blk)'] <- sum(exp(ablk$lblk)*c(204,206:208))
-        } else { # aliquots share blanks by 'blk' label
-            ablk <- avgblank(blanks=blanks,blk=samples[ii,'blk'],
-                             spikes=spikes,spk=samples[ii,'spk'])
         }
         lsmp <- getsample(i=ii,samples,spikes)
         E <- getE(ii,samples,ablk,spikes)
@@ -210,8 +208,8 @@ process <- function(samples,blanks,spikes,cblanks){
         cormat <- cov2cor(covmat)
         out[ii,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
         out[ii,c('4/6','7/6')] <- exp(fit$par[5:6])
-        out[ii,'s[4/6]'] <- sqrt(covmat[5,5])
-        out[ii,'s[7/6]'] <- sqrt(covmat[6,6])
+        out[ii,'err[4/6]'] <- 200*sqrt(covmat[5,5])/out[ii,'4/6']
+        out[ii,'err[7/6]'] <- 200*sqrt(covmat[6,6])/out[ii,'7/6']
         out[ii,'rho'] <- cormat[5,6]
     }
     out

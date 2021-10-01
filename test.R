@@ -24,5 +24,5 @@ if (option==1){ # all samples use the same blank:
 
 # aliquots to omit from the isochron
 omit <- c(1:3,6,8)
-PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2)
+PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2,ierr=4)
 isochron(PbPb,exterr=FALSE)
