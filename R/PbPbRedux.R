@@ -176,7 +176,48 @@ init <- function(i,lsmp,lblk){
     out
 }
 
-# all input and output errors are reported as 2se%
+#' @title Pb-Pb data processing
+#' @description High level functionthat takes samples, blanks and
+#'     spikes as input and produces a table of Pb/Pb ratios,
+#'     uncertainties and error correlations as output
+#' @param samples data frame with sample data. For an example, see
+#'     \code{system.file("samples1.csv",package="PbPbRedux")}
+#' @param blanks data frame with blank data. For an example, see
+#'     \code{system.file("blanks1.csv",package="PbPbRedux")}
+#' @param spikes data frame with spike data. For an example, see
+#'     \code{system.file("spikes.csv",package="PbPbRedux")}
+#' @param cblanks data frame with replicate blank data. For an
+#'     example, see
+#'     \code{system.file("blanks2.csv",package="PbPbRedux")}
+#' @return a table with Pb concentrations, Pb/Pb ratios and error
+#'     correlations
+#' @examples
+#' library(PbPbRedux)
+#' 
+#' s1 <- system.file("samples1.csv",package="PbPbRedux")
+#' s2 <- system.file("samples2.csv",package="PbPbRedux")
+#' b1 <- system.file("blanks1.csv",package="PbPbRedux")
+#' b2 <- system.file("blanks2.csv",package="PbPbRedux")
+#' sp <- system.file("spikes.csv",package="PbPbRedux")
+#'
+#' spikes <- read.csv(sp,header=TRUE)
+#' 
+#' # example 1: all samples use the same blank:
+#' samples <- read.csv(s1,header=TRUE)
+#' blanks <- read.csv(b1,header=TRUE)
+#' tab <- process(samples,blanks,spikes)
+#'
+#' # example 2: each aliquot has its own blank:
+#' samples <- read.csv('s2.csv',header=TRUE)
+#' blanks <- read.csv('b2.csv',header=TRUE)
+#' tab <- process(samples,blanks,spikes)
+#'
+#' # example 3: individual blanks with shared covariance matrix:
+#' samples <- read.csv('s2.csv',header=TRUE)
+#' cblanks <- read.csv('b1.csv',header=TRUE)
+#' blanks <- read.csv('b2.csv',header=TRUE)
+#' tab <- process(samples,blanks,spikes,cblanks)
+#' @export
 process <- function(samples,blanks,spikes,cblanks){
     cb <- !missing(cblanks)
     ns <- nrow(samples)

@@ -1,10 +1,33 @@
 # PbPbRedux
 TIMS Pb/Pb data reduction software
 
-Example (requires [IsoplotR](http://ucl.ac.uk/~ucfbpve/isoplotr/)):
+## Installation
+
+To install `PbPbRedux` from GitHub, you need the `remotes` package. If
+this is not installed on your system, then you can do so as follows:
 
 ```
-source('PbPbRedux.R')
+install.packages('remotes')
+```
+
+Once `remotes` is installed, `PbPbRedux` can be installed as follows:
+
+```
+remotes::install_github('pvermees/PbPbRedux')
+```
+
+`PbPbRedux` depends on
+[`IsoplotR`]{http://github.com/pvermees/IsoplotR}, so the latter
+package is automatically loaded whenever `PbPbRedux` is.
+
+## Example
+
+Using the example input files in the [`inst`](inst) folder of this
+GitHub repository:
+
+```
+library(PbPbRedux)
+
 spikes <- read.csv('spikes.csv',header=TRUE)
 settings('iratio','U238U235',137.786,0.015)
 
@@ -25,8 +48,9 @@ if (option==1){ # all samples use the same blank:
     tab <- process(samples,blanks,spikes,cblanks)
 }
 
-# aliquots to omit from the isochron
-omit <- c(1:3,6,8)
-PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2)
-IsoplotR::isochron(PbPb,exterr=FALSE)
+omit <- c(1:3,6,8) # aliquots to omit from the isochron
+
+# plot the results using IsoplotR functions:
+PbPb <- as.PbPb(tab[-omit,],format=2)
+isochron(PbPb,exterr=FALSE)
 ```

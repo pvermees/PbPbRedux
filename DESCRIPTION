@@ -1,0 +1,16 @@
+Package: PbPbRedux
+Title: Pb-Pb data processing for meteorite geochronology
+Version: 0.1
+Authors@R: 
+    person(given = "Pieter",
+           family = "Vermeesch",
+           role = c("aut", "cre"),
+           email = "p.vermeesch@ucl.ac.uk")
+Description: The Pb-budget of meteorites consists of extraterrestrial and terrestrial components. The two components can be separated by spiking the sample with a solution that contains synthetic Pb-202 and Pb-205. The spike serves two purposes. First, the Pb-205 in it is used as a tracer to compare the sample (which is a mixture of extraterrestrial and terrestrial Pb) with a blank solution (which contains only terrestrial Pb). Second, if the true Pb-205/Pb-202 ratio of the spike is known, then this can be used to correct for mass-dependent fractionation. The package performs all these calculations in logratio space, so as to reduce the skewness of the mass spectrometer noise. It uses a maximum likelihood approach to ensure that blank corrections cannot result in negative values.
+License: `use_gpl3_license()`
+Depends: R (>= 3.1.0), IsoplotR
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+
