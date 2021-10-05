@@ -4,7 +4,7 @@
 \alias{process}
 \title{Pb-Pb data processing}
 \usage{
-process(samples, blanks, spikes, cblanks)
+process(samples, blanks, spikes, cblanks, ierr = 4)
 }
 \arguments{
 \item{samples}{data frame with sample data. For an example, see
@@ -19,6 +19,17 @@ process(samples, blanks, spikes, cblanks)
 \item{cblanks}{data frame with replicate blank data. For an
 example, see
 \code{system.file("blanks2.csv",package="PbPbRedux")}}
+
+\item{ierr}{indicates whether the analytical uncertainties are
+reported as:
+
+\code{1}: 1\eqn{\sigma} absolute uncertainties.
+
+\code{2}: 2\eqn{\sigma} absolute uncertainties.
+
+\code{3}: 1\eqn{\sigma} relative uncertainties (\eqn{\%}).
+
+\code{4}: 2\eqn{\sigma} relative uncertainties (\eqn{\%}).}
 }
 \value{
 a table with Pb concentrations, Pb/Pb ratios and error
@@ -55,4 +66,5 @@ samples <- read.csv('s2.csv',header=TRUE)
 cblanks <- read.csv('b1.csv',header=TRUE)
 blanks <- read.csv('b2.csv',header=TRUE)
 tab <- process(samples,blanks,spikes,cblanks)
+
 }

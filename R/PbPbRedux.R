@@ -1,3 +1,39 @@
+# convert input errors to relative uncertainties
+ierradj <- function(dat,rcol,ierr=1){
+    errcol <- rcol + 1
+    out <- dat
+    if (ierr==1){
+        out[,errcol] <- dat[,errcol]/dat[,rcol]
+    } else if (ierr==2){
+        out[,errcol] <- 0.5*dat[,errcol]/dat[,rcol]
+    } else if (ierr==3){
+        out[,errcol] <- dat[,errcol]/100
+    } else if (ierr==4){
+        out[,errcol] <- dat[,errcol]/200
+    } else {
+        stop('Invalid ierr value.')
+    }
+    out
+}
+
+# convert standard errors to specified output format
+oerradj <- function(dat,rcol,oerr=1){
+    errcol <- rcol + 1
+    out <- dat
+    if (oerr==1){
+        # do nothing
+    } else if (oerr==2){
+        out[,errcol] <- 2*dat[,errcol]
+    } else if (oerr==3){
+        out[,errcol] <- 100*dat[,errcol]/dat[,rcol]
+    } else if (oerr==4){
+        out[,errcol] <- 200*dat[,errcol]/dat[,rcol]
+    } else {
+        stop('Invalid oerr value.')
+    }
+    out
+}
+
 beta <- function(mx){
     (log(205)-log(mx))/(log(205)-log(202))
 }
@@ -15,14 +51,10 @@ lxstar <- function(lM,lr45,lr65,lr75,lr85,lr25,lr25t){
 }
 
 avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
-    if (missing(blk))
-        blk <- blanks[i,'name']
-    if (missing(spk))
-        spk <- blanks[i,'spk']
-    if (missing(i))
-        i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
-    if (length(i)<1)
-        stop('Missing blank data.')
+    if (missing(blk)) blk <- blanks[i,'name']
+    if (missing(spk)) spk <- blanks[i,'spk']
+    if (missing(i)) i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
+    if (length(i)<1) stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57','r58'),drop=FALSE])
     lblk <- lxstar(lM=lbdat[,'mgspk'] +
                        ifelse(conc,log(spikes[spk,'pmg205']),0),
@@ -42,7 +74,7 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
     mlblk <- colMeans(lblkprime)
     if (length(i)<2){
         E <- diag(blanks[i,c('mgspkerr','err52','err54',
-                             'err56','err57','err58')]/200)^2
+                             'err56','err57','err58')])^2
         J <- matrix(0,4,6)
         rownames(J) <- c('l4','l6','l7','l8')
         J[1:4,1] <- 1
@@ -79,9 +111,10 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
 getaliquot <- function(i,samples,spikes,conc=TRUE){
     inames <- c('mgspk','r74','r64','r76','r65','r86','r52')
     onames <- c('lM','l25','l45','l65','l75','l85')
+    ierrnames <- c('errmgspk','err74','err64',
+                   'err76','err65','err86','err52')
     lsdat <- unlist(log(samples[i,inames]))
-    errlsdat <- samples[i,c('errmgspk','err74','err64',
-                            'err76','err65','err86','err52')]/200
+    errlsdat <- samples[i,ierrnames] # relative errors
     spk <- samples[i,'spk']
     lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[spk,'pmg205']),0)
     lr25 <- -lsdat['r52']
@@ -107,7 +140,7 @@ getaliquot <- function(i,samples,spikes,conc=TRUE){
     covlsmp <- J %*% E %*% t(J)
     spk <- samples[i,'spk']
     lspk <- log(spikes[spk,'r52'])
-    # placeholder for spikes[spk[1],'err52']/200
+    # placeholder for spikes[spk[1],'err52']
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
 }
@@ -189,6 +222,17 @@ init <- function(i,lsmp,lblk){
 #' @param cblanks data frame with replicate blank data. For an
 #'     example, see
 #'     \code{system.file("blanks2.csv",package="PbPbRedux")}
+#' @param ierr indicates whether the analytical uncertainties are
+#'     reported as: 
+#' 
+#' \code{1}: 1\eqn{\sigma} absolute uncertainties.
+#' 
+#' \code{2}: 2\eqn{\sigma} absolute uncertainties.
+#' 
+#' \code{3}: 1\eqn{\sigma} relative uncertainties (\eqn{\%}).
+#' 
+#' \code{4}: 2\eqn{\sigma} relative uncertainties (\eqn{\%}).
+#' 
 #' @return a table with Pb concentrations, Pb/Pb ratios and error
 #'     correlations
 #' @examples
@@ -217,29 +261,33 @@ init <- function(i,lsmp,lblk){
 #' cblanks <- read.csv('b1.csv',header=TRUE)
 #' blanks <- read.csv('b2.csv',header=TRUE)
 #' tab <- process(samples,blanks,spikes,cblanks)
+#' 
 #' @export
-process <- function(samples,blanks,spikes,cblanks){
+process <- function(samples,blanks,spikes,cblanks,ierr=4){
     cb <- !missing(cblanks)
+    SM <- ierradj(samples,2*(2:9),ierr=ierr)
+    BL <- ierradj(blanks,2*(1:4)+1,ierr=ierr)
+    SP <- spikes
     ns <- nrow(samples)
     cnames <- c('4/6','err[4/6]','7/6','err[7/6]','rho')
     if (cb){
+        CB <- ierradj(cblanks,2*(1:4)+1,ierr=ierr)
         cnames <- c(cnames,'pgPb','pgPb(blk)')
-        cblk <- avgblank(i=1:ns,blanks=cblanks,spikes=spikes)$covlblk
+        cblk <- avgblank(i=1:ns,blanks=CB,spikes=SP)$covlblk
     } else {
         cnames <- c(cnames,'pgPb')
     }
     out <- matrix(NA,nrow=ns,ncol=length(cnames))
     colnames(out) <- cnames
-    rownames(out) <- samples$Label
-    for (ii in 1:nrow(samples)){
-        ablk <- avgblank(blanks=blanks,blk=samples[ii,'blk'],
-                         spikes=spikes,spk=samples[ii,'spk'])
+    rownames(out) <- SM$Label
+    for (ii in 1:nrow(SM)){
+        ablk <- avgblank(blanks=BL,blk=SM[ii,'blk'],spikes=SP,spk=SM[ii,'spk'])
         if (cb){ # each aliquot has its own blank but covariance matrix is shared
             ablk$covlblk <- cblk
             out[ii,'pgPb(blk)'] <- sum(exp(ablk$lblk)*c(204,206:208))
         }
-        lsmp <- getsample(i=ii,samples,spikes)
-        E <- getE(ii,samples,ablk,spikes)
+        lsmp <- getsample(i=ii,SM,SP)
+        E <- getE(ii,SM,ablk,SP)
         pinit <- init(i=ii,lsmp=lsmp,lblk=ablk$lblk)
         fit <- optim(pinit,fn=LL,method='BFGS',i=ii,lsmp=lsmp,
                      lblk=ablk$lblk,E=E,hessian=TRUE)
@@ -249,9 +297,10 @@ process <- function(samples,blanks,spikes,cblanks){
         cormat <- cov2cor(covmat)
         out[ii,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
         out[ii,c('4/6','7/6')] <- exp(fit$par[5:6])
-        out[ii,'err[4/6]'] <- 200*sqrt(covmat[5,5])/out[ii,'4/6']
-        out[ii,'err[7/6]'] <- 200*sqrt(covmat[6,6])/out[ii,'7/6']
+        out[ii,'err[4/6]'] <- sqrt(covmat[5,5])
+        out[ii,'err[7/6]'] <- sqrt(covmat[6,6])
         out[ii,'rho'] <- cormat[5,6]
     }
+    out <- oerradj(out,c(1,3),oerr=ierr)
     out
 }

@@ -17,7 +17,7 @@ remotes::install_github('pvermees/PbPbRedux')
 ```
 
 `PbPbRedux` depends on
-[`IsoplotR`]{http://github.com/pvermees/IsoplotR}, so the latter
+[`IsoplotR`](http://github.com/pvermees/IsoplotR), so the latter
 package is automatically loaded whenever `PbPbRedux` is.
 
 ## Example
@@ -51,6 +51,6 @@ if (option==1){ # all samples use the same blank:
 omit <- c(1:3,6,8) # aliquots to omit from the isochron
 
 # plot the results using IsoplotR functions:
-PbPb <- as.PbPb(tab[-omit,],format=2)
+PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2,ierr=4)
 isochron(PbPb,exterr=FALSE)
 ```
