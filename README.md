@@ -31,9 +31,6 @@ GitHub repository:
 # load the package:
 library(PbPbRedux)
 
-# change the default 238U/235U ratio to a meteoritic value:
-settings('iratio','U238U235',137.786,0.015)
-
 # load the input files:
 spikes <- read.csv('spikes.csv',header=TRUE)
 samples <- read.csv('samples1.csv',header=TRUE)
@@ -50,7 +47,6 @@ input files. See the [`inst`](inst) folder for details:
 
 ```
 library(PbPbRedux)
-settings('iratio','U238U235',137.786,0.015)
 spikes <- read.csv('spikes.csv',header=TRUE)
 samples <- read.csv('samples2.csv',header=TRUE)
 blanks <- read.csv('blanks2.csv',header=TRUE)
@@ -64,7 +60,6 @@ as a measure of dispersion for the individual blank measurements:
 
 ```
 library(PbPbRedux)
-settings('iratio','U238U235',137.786,0.015)
 spikes <- read.csv('spikes.csv',header=TRUE)
 samples <- read.csv('samples2.csv',header=TRUE)
 blanks <- read.csv('blanks2.csv',header=TRUE)
@@ -90,6 +85,11 @@ the results as an isochron using the
 [`IsoplotR`](http://github.com/pvermees/IsoplotR) package:
 
 ```
+library(IsoplotR)
+
+# change the default 238U/235U ratio to a meteoritic value:
+settings('iratio','U238U235',137.786,0.015)
+
 PbPb <- IsoplotR:::as.PbPb(tab,format=2,ierr=4)
 isochron(PbPb,exterr=FALSE)
 ```

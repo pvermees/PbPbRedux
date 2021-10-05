@@ -56,8 +56,9 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
     if (missing(i)) i <- which(blanks[,'spk']%in%spk & blanks[,'name']%in%blk)
     if (length(i)<1) stop('Missing blank data.')
     lbdat <- log(blanks[i,c('mgspk','r52','r54','r56','r57','r58'),drop=FALSE])
+    ispk <- which(spk%in%spikes[,'name'])
     lblk <- lxstar(lM=lbdat[,'mgspk'] +
-                       ifelse(conc,log(spikes[spk,'pmg205']),0),
+                       ifelse(conc,log(spikes[ispk,'pmg205']),0),
                    lr45=-lbdat[,'r54'], # flip sign
                    lr65=-lbdat[,'r56'], # flip sign
                    lr75=-lbdat[,'r57'], # flip sign
@@ -65,7 +66,7 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
                    lr25=-lbdat[,'r52'], # flip sign
                    lr25t=-log(spikes[spk,'r52'])) # flip sign
     lblkprime <- lxstar(lM=lbdat[,'mgspk'] +
-                            ifelse(conc,log(spikes[spk,'pmg205']),0),
+                            ifelse(conc,log(spikes[ispk,'pmg205']),0),
                         lr45=-lbdat[,'r54'], # flip sign
                         lr65=-lbdat[,'r56'], # flip sign
                         lr75=-lbdat[,'r57'], # flip sign
@@ -90,7 +91,7 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
     } else {
         covlblk <- cov(lblkprime)
     }
-    lspk <- -log(spikes[spk,'r52'])[1]
+    lspk <- -log(spikes[ispk,'r52'])[1]
     errlspk <- 0 # placeholder for spikes[spk[1],'err52']/200
     out <- list(lblk=mlblk,covlblk=covlblk,lspk=lspk,errlspk=errlspk)
     if (conc){
@@ -116,7 +117,8 @@ getaliquot <- function(i,samples,spikes,conc=TRUE){
     lsdat <- unlist(log(samples[i,inames]))
     errlsdat <- samples[i,ierrnames] # relative errors
     spk <- samples[i,'spk']
-    lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[spk,'pmg205']),0)
+    ispk <- which(spk%in%spikes[,'name'])
+    lM <- lsdat['mgspk'] + ifelse(conc,log(spikes[ispk,'pmg205']),0)
     lr25 <- -lsdat['r52']
     lr45 <- lsdat['r65']-lsdat['r64']
     lr65 <- lsdat['r65']
@@ -139,7 +141,7 @@ getaliquot <- function(i,samples,spikes,conc=TRUE){
     J['l85','r65'] <- 1
     covlsmp <- J %*% E %*% t(J)
     spk <- samples[i,'spk']
-    lspk <- log(spikes[spk,'r52'])
+    lspk <- log(spikes[ispk,'r52'])
     # placeholder for spikes[spk[1],'err52']
     errlspk <- 0
     list(lsmp=lsmp,covlsmp=covlsmp,lspk=lspk,errlspk=errlspk)
@@ -147,13 +149,14 @@ getaliquot <- function(i,samples,spikes,conc=TRUE){
 getsample <- function(i,samples,spikes,conc=TRUE){
     a <- getaliquot(i=i,samples=samples,spikes=spikes,conc=conc)
     spk <- samples[i,'spk']
+    ispk <- which(spk%in%spikes[,'name'])
     out <- lxstar(lM=a$lsmp['lM'], 
                   lr45=a$lsmp['l45'],
                   lr65=a$lsmp['l65'],
                   lr75=a$lsmp['l75'],
                   lr85=a$lsmp['l85'],
                   lr25=a$lsmp['l25'],
-                  lr25t=-log(spikes[spk,'r52']))
+                  lr25t=-log(spikes[ispk,'r52']))
     out
 }
 
