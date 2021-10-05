@@ -41,16 +41,12 @@ blanks <- read.csv('blanks1.csv',header=TRUE)
 
 # process the data:
 tab <- process(samples,blanks,spikes,ierr=4)
-
-# plot the results using IsoplotR functions:
-PbPb <- IsoplotR:::as.PbPb(tab,format=2,ierr=4)
-isochron(PbPb,exterr=FALSE)
 ```
 
 ### Example 2: each aliquot has its own blank
 
-This is the same code as the previous example, but using different
-input files. See the [`inst`](inst) folder or details:
+This is the same code as in the previous example, but using different
+input files. See the [`inst`](inst) folder for details:
 
 ```
 library(PbPbRedux)
@@ -59,8 +55,6 @@ spikes <- read.csv('spikes.csv',header=TRUE)
 samples <- read.csv('samples2.csv',header=TRUE)
 blanks <- read.csv('blanks2.csv',header=TRUE)
 tab <- process(samples,blanks,spikes)
-PbPb <- IsoplotR:::as.PbPb(tab,format=2,ierr=4)
-isochron(PbPb,exterr=FALSE)
 ```
 
 ### Example 3: individual blanks with shared covariance matrix
@@ -78,16 +72,30 @@ blanks <- read.csv('blanks2.csv',header=TRUE)
 # load 15 replicate blank values:
 cblanks <- read.csv('blanks1.csv',header=TRUE)
 
-# process the data and plot the results:
 tab <- process(samples,blanks,spikes,cblanks)
+```
+
+### Saving and plotting the results:
+
+The output table can be saved to a comma separated variable
+file using the basic `csv.write` function:
+
+```
+write.csv(tab,file='results.csv',row.names=FALSE)
+```
+
+You can either open this file in a spreadsheet application for further
+processing, or you can continue working in `R`.  For example, plotting
+the results as an isochron using the
+[`IsoplotR`](http://github.com/pvermees/IsoplotR) package:
+
+```
 PbPb <- IsoplotR:::as.PbPb(tab,format=2,ierr=4)
 isochron(PbPb,exterr=FALSE)
 ```
 
-### Omitting aliquots from the isochron
-
 Individual aliquots can be removed from the isochron using standard
-`R` syntax. Following up from any of the above examples:
+`R` syntax:
 
 ```
 omit <- c(1:3,6,8) # aliquots to omit from the isochron
