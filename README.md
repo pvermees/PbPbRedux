@@ -16,10 +16,6 @@ Once `remotes` is installed, `PbPbRedux` can be installed as follows:
 remotes::install_github('pvermees/PbPbRedux')
 ```
 
-`PbPbRedux` depends on
-[`IsoplotR`](http://github.com/pvermees/IsoplotR), so the latter
-package is automatically loaded whenever `PbPbRedux` is.
-
 ## Examples
 
 Using the example input files in the [`inst`](inst) folder of this
@@ -37,7 +33,7 @@ samples <- read.csv('samples1.csv',header=TRUE)
 blanks <- read.csv('blanks1.csv',header=TRUE)
 
 # process the data:
-tab <- process(samples,blanks,spikes,ierr=4)
+tab <- process(samples,blanks,spikes)
 ```
 
 ### Example 2: each aliquot has its own blank
@@ -70,10 +66,16 @@ cblanks <- read.csv('blanks1.csv',header=TRUE)
 tab <- process(samples,blanks,spikes,cblanks)
 ```
 
+To view the documentation of the `process` function:
+
+```
+?process
+```
+
 ### Saving and plotting the results:
 
 The output table can be saved to a comma separated variable
-file using the basic `csv.write` function:
+file using the basic `write.csv` function:
 
 ```
 write.csv(tab,file='results.csv',row.names=FALSE)
@@ -90,7 +92,12 @@ library(IsoplotR)
 # change the default 238U/235U ratio to a meteoritic value:
 settings('iratio','U238U235',137.786,0.015)
 
+# using IsoplotR's undocumented 'as.PbPb' function to convert
+# the output table into a PbPb data object, where ierr=4 specifies
+# that errors are provided as 2se % values:
 PbPb <- IsoplotR:::as.PbPb(tab,format=2,ierr=4)
+
+# plot as an inverse isochron (type ?isochron for additional options):
 isochron(PbPb,exterr=FALSE)
 ```
 
@@ -102,4 +109,3 @@ omit <- c(1:3,6,8) # aliquots to omit from the isochron
 PbPb <- IsoplotR:::as.PbPb(tab[-omit,],format=2,ierr=4)
 isochron(PbPb,exterr=FALSE)
 ```
-
