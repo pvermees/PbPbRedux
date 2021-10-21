@@ -9,6 +9,7 @@ function start() {
 
 function loaddefaults(fn){
     shinylight.call('loadTable', {fn: fn}, null).then(function(result) {
+	result.data = result.data.tab;
         shinylight.setGridResult(inputTable, result);
     }).catch(function(reason) {
         shinylight.setElementText('error', reason);

@@ -1,5 +1,8 @@
 loadTable <- function(fn) {
-    read.csv(system.file(fn,package='PbPbRedux'))
+    out <- list()
+    out$tab <- read.csv(system.file(fn,package='PbPbRedux'))
+    out$foo <- 'hello'
+    out
 }
 
 freeformServer <- function(port=NULL) {
