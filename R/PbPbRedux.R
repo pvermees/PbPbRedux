@@ -255,14 +255,14 @@ init <- function(i,lsmp,lblk){
 #' tab <- process(samples,blanks,spikes)
 #'
 #' # example 2: each aliquot has its own blank:
-#' samples <- read.csv('s2.csv',header=TRUE)
-#' blanks <- read.csv('b2.csv',header=TRUE)
+#' samples <- read.csv(s2,header=TRUE)
+#' blanks <- read.csv(b2,header=TRUE)
 #' tab <- process(samples,blanks,spikes)
 #'
 #' # example 3: individual blanks with shared covariance matrix:
-#' samples <- read.csv('s2.csv',header=TRUE)
-#' cblanks <- read.csv('b1.csv',header=TRUE)
-#' blanks <- read.csv('b2.csv',header=TRUE)
+#' samples <- read.csv(s2,header=TRUE)
+#' cblanks <- read.csv(b1,header=TRUE)
+#' blanks <- read.csv(b2,header=TRUE)
 #' tab <- process(samples,blanks,spikes,cblanks)
 #' 
 #' @export
@@ -272,23 +272,17 @@ process <- function(samples,blanks,spikes,cblanks,ierr=4){
     BL <- ierradj(blanks,2*(1:4)+1,ierr=ierr)
     SP <- spikes
     ns <- nrow(samples)
-    cnames <- c('4/6','err[4/6]','7/6','err[7/6]','rho')
-    if (cb){
+    cnames <- c('4/6','err[4/6]','7/6','err[7/6]','rho','pgPb','pgPb(blk)')
+    if (cb){ # each aliquot has its own blank but covariance matrix is shared
         CB <- ierradj(cblanks,2*(1:4)+1,ierr=ierr)
-        cnames <- c(cnames,'pgPb','pgPb(blk)')
         cblk <- avgblank(i=1:ns,blanks=CB,spikes=SP)$covlblk
-    } else {
-        cnames <- c(cnames,'pgPb')
     }
     out <- matrix(NA,nrow=ns,ncol=length(cnames))
     colnames(out) <- cnames
     rownames(out) <- SM$Label
     for (ii in 1:nrow(SM)){
         ablk <- avgblank(blanks=BL,blk=SM[ii,'blk'],spikes=SP,spk=SM[ii,'spk'])
-        if (cb){ # each aliquot has its own blank but covariance matrix is shared
-            ablk$covlblk <- cblk
-            out[ii,'pgPb(blk)'] <- sum(exp(ablk$lblk)*c(204,206:208))
-        }
+        if (cb) ablk$covlblk <- cblk
         lsmp <- getsample(i=ii,SM,SP)
         E <- getE(ii,SM,ablk,SP)
         pinit <- init(i=ii,lsmp=lsmp,lblk=ablk$lblk)
@@ -299,6 +293,7 @@ process <- function(samples,blanks,spikes,cblanks,ierr=4){
         covmat <- J %*% solve(H) %*% t(J)
         cormat <- cov2cor(covmat)
         out[ii,'pgPb'] <- sum(exp(lsmp)*c(204,206:208))
+        out[ii,'pgPb(blk)'] <- sum(exp(ablk$lblk)*c(204,206:208))
         out[ii,c('4/6','7/6')] <- exp(fit$par[5:6])
         out[ii,'err[4/6]'] <- sqrt(covmat[5,5])
         out[ii,'err[7/6]'] <- sqrt(covmat[6,6])

@@ -57,14 +57,14 @@ blanks <- read.csv(b1,header=TRUE)
 tab <- process(samples,blanks,spikes)
 
 # example 2: each aliquot has its own blank:
-samples <- read.csv('s2.csv',header=TRUE)
-blanks <- read.csv('b2.csv',header=TRUE)
+samples <- read.csv(s2,header=TRUE)
+blanks <- read.csv(b2,header=TRUE)
 tab <- process(samples,blanks,spikes)
 
 # example 3: individual blanks with shared covariance matrix:
-samples <- read.csv('s2.csv',header=TRUE)
-cblanks <- read.csv('b1.csv',header=TRUE)
-blanks <- read.csv('b2.csv',header=TRUE)
+samples <- read.csv(s2,header=TRUE)
+cblanks <- read.csv(b1,header=TRUE)
+blanks <- read.csv(b2,header=TRUE)
 tab <- process(samples,blanks,spikes,cblanks)
 
 }
