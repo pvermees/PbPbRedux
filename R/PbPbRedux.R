@@ -64,7 +64,7 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
                    lr75=-lbdat[,'r57'], # flip sign
                    lr85=-lbdat[,'r58'], # flip sign
                    lr25=-lbdat[,'r52'], # flip sign
-                   lr25t=-log(spikes[spk,'r52'])) # flip sign
+                   lr25t=-log(spikes[ispk,'r52'])) # flip sign
     lblkprime <- lxstar(lM=lbdat[,'mgspk'] +
                             ifelse(conc,log(spikes[ispk,'pmg205']),0),
                         lr45=-lbdat[,'r54'], # flip sign

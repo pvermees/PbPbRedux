@@ -28,12 +28,12 @@ GitHub repository:
 library(PbPbRedux)
 
 # load the input files:
-spikes <- read.csv('spikes.csv',header=TRUE)
-samples <- read.csv('samples1.csv',header=TRUE)
-blanks <- read.csv('blanks1.csv',header=TRUE)
+smp <- read.csv('samples1.csv',header=TRUE)
+blk <- read.csv('blanks1.csv',header=TRUE)
+spk <- read.csv('spikes.csv',header=TRUE)
 
 # process the data:
-tab <- process(samples,blanks,spikes)
+tab <- process(samples=smp,blanks=blk,spikes=spk)
 ```
 
 ### Example 2: each aliquot has its own blank
@@ -43,10 +43,10 @@ input files. See the [`inst`](inst) folder for details:
 
 ```
 library(PbPbRedux)
-spikes <- read.csv('spikes.csv',header=TRUE)
-samples <- read.csv('samples2.csv',header=TRUE)
-blanks <- read.csv('blanks2.csv',header=TRUE)
-tab <- process(samples,blanks,spikes)
+smp <- read.csv('samples2.csv',header=TRUE)
+blk <- read.csv('blanks2.csv',header=TRUE)
+spk <- read.csv('spikes.csv',header=TRUE)
+tab <- process(samples=smp,blanks=blk,spikes=spk)
 ```
 
 ### Example 3: individual blanks with shared covariance matrix
@@ -56,14 +56,14 @@ as a measure of dispersion for the individual blank measurements:
 
 ```
 library(PbPbRedux)
-spikes <- read.csv('spikes.csv',header=TRUE)
-samples <- read.csv('samples2.csv',header=TRUE)
-blanks <- read.csv('blanks2.csv',header=TRUE)
+smp <- read.csv('samples2.csv',header=TRUE)
+blk <- read.csv('blanks2.csv',header=TRUE)
+spk <- read.csv('spikes.csv',header=TRUE)
 
 # load 15 replicate blank values:
-cblanks <- read.csv('blanks1.csv',header=TRUE)
+cblk <- read.csv('blanks1.csv',header=TRUE)
 
-tab <- process(samples,blanks,spikes,cblanks)
+tab <- process(samples=smp,blanks=blk,spikes=spk,cblanks=cblk)
 ```
 
 To view the documentation of the `process` function:
