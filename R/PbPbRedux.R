@@ -73,9 +73,12 @@ avgblank <- function(i,blanks,blk,spikes,spk,conc=TRUE){
                         lr85=-lbdat[,'r58'], # flip sign
                         lr25=-lbdat[,'r52']) # flip sign
     mlblk <- colMeans(lblkprime)
-    if (length(i)<2){
-        E <- diag(blanks[i,c('mgspkerr','err52','err54',
-                             'err56','err57','err58')])^2
+    ni <- length(i)
+    if (ni<3){
+        err <- blanks[i,c('mgspkerr','err52','err54','err56','err57','err58'),
+                      drop=FALSE]
+        SS <- colSums(err^2)
+        E <- diag(SS/ni^2)
         J <- matrix(0,4,6)
         rownames(J) <- c('l4','l6','l7','l8')
         J[1:4,1] <- 1
